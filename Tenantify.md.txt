@@ -1,0 +1,274 @@
+# Tenantify 🏢 — Ruby Gem Development Plan
+
+> **Modern multi-tenancy for Rails, solving every real-world problem acts_as_tenant couldn't.**
+
+---
+
+## 1. Why Tenantify?
+
+`acts_as_tenant` is outdated, unmaintained in key areas, and missing modern Rails ecosystem support. Tenantify is a full replacement built for Rails 7+, covering every pain point developers face today.
+
+---
+
+## 2. Problems We're Solving
+
+### From acts_as_tenant GitHub Issues
+
+| Issue | Problem | Our Solution |
+|-------|---------|--------------|
+| #356 | Sidekiq retries lose tenant context | Auto re-attach tenant on retry |
+| #354 | `update_all`, `delete_all` not tenant-scoped | Scope ALL write operations |
+| #353 | GoodJob loses `current_tenant` | First-class GoodJob support |
+| #352 | Solid Queue not working | Built-in Solid Queue support |
+| #342 | Cross-tenant associations not validated | Auto cross-tenant association validation |
+| #338 | `without_tenant` broken in RSpec | Proper RSpec helpers built-in |
+| #335 | ActiveJob testing broken | Test helpers for all job adapters |
+| #330 | ActiveStorage blocked | Native ActiveStorage support |
+| #329 | Tenant ID silently overridden | Raise error + audit log |
+| #328 | Sidekiq tenancy clobbered between jobs | Unified job middleware |
+
+### Modern World Problems (Not in acts_as_tenant)
+
+| Problem | Our Solution |
+|---------|--------------|
+| No Hotwire/Turbo awareness | Tenant-scoped Turbo Streams |
+| No GraphQL support | Tenant context in GraphQL queries |
+| No API mode support | Header / JWT based tenant resolution |
+| No subdomain + custom domain together | Both subdomain AND custom domain routing |
+| No tenant switching for admins | `switch_tenant!` for superadmins |
+| No per-tenant config | Each tenant has its own settings hash |
+| No tenant seeding | `tenantify:seed` rake task |
+| No console helpers | Rails console tenant helpers |
+
+---
+
+## 3. DSL Vision
+
+```ruby
+# Model
+class Project < ApplicationRecord
+  include Tenantify::Scoped
+  belongs_to_tenant :organization
+end
+
+# Controller
+class ApplicationController < ActionController::Base
+  include Tenantify::Controller
+
+  set_tenant_by :subdomain       # auto from subdomain
+  # set_tenant_by :header        # X-Tenant-ID header (API mode)
+  # set_tenant_by :jwt           # decode from JWT
+  # set_tenant_by :custom_domain # custom domain mapping
+end
+
+# Jobs — all queues supported
+class ReportJob < ApplicationJob
+  include Tenantify::Job  # works with Sidekiq, GoodJob, Solid Queue
+
+  def perform
+    current_tenant  # always available, survives retries
+  end
+end
+
+# Admin tenant switching
+Tenantify.switch_to(organization) do
+  # everything scoped to that org
+end
+
+# Per-tenant config
+organization.tenantify_config[:max_users]      # => 50
+organization.tenantify_config[:storage_limit]  # => "10GB"
+
+# RSpec helpers
+RSpec.describe Project, type: :model do
+  include Tenantify::TestHelpers
+
+  with_tenant(:organization) do
+    it "scopes correctly" { ... }
+  end
+end
+```
+
+---
+
+## 4. Gem Structure
+
+```
+tenantify/
+├── lib/
+│   ├── tenantify/
+│   │   ├── scoped.rb           # Model concern — row-level tenant scoping
+│   │   ├── controller.rb       # Controller concern — tenant resolution
+│   │   ├── job.rb              # Job concern — Sidekiq / GoodJob / Solid Queue
+│   │   ├── resolvers/
+│   │   │   ├── subdomain.rb    # Subdomain-based resolution
+│   │   │   ├── header.rb       # X-Tenant-ID header (API mode)
+│   │   │   ├── jwt.rb          # JWT-based resolution
+│   │   │   └── custom_domain.rb# Custom domain mapping
+│   │   ├── middleware/
+│   │   │   ├── sidekiq.rb      # Sidekiq middleware (push + pop tenant)
+│   │   │   ├── good_job.rb     # GoodJob integration
+│   │   │   └── solid_queue.rb  # Solid Queue integration
+│   │   ├── configuration.rb    # Per-tenant config DSL
+│   │   ├── switcher.rb         # Admin tenant switching
+│   │   ├── auditor.rb          # Tenant ID override protection + audit log
+│   │   ├── active_storage.rb   # ActiveStorage tenant scoping
+│   │   ├── turbo.rb            # Hotwire/Turbo Streams support
+│   │   ├── graphql.rb          # GraphQL context integration
+│   │   ├── test_helpers.rb     # RSpec + Minitest helpers
+│   │   ├── console_helpers.rb  # Rails console helpers
+│   │   ├── railtie.rb          # Rails integration
+│   │   └── version.rb
+│   └── tenantify.rb            # Main entry point
+├── app/
+│   └── models/
+│       └── concerns/
+├── db/
+│   └── migrate/
+├── tasks/
+│   └── tenantify.rake          # tenantify:seed, tenantify:migrate tasks
+├── spec/
+│   ├── tenantify/
+│   └── spec_helper.rb
+├── README.md
+├── CHANGELOG.md
+├── LICENSE
+└── tenantify.gemspec
+```
+
+---
+
+## 5. Module Breakdown
+
+### 5.1 `Tenantify::Scoped` (Model Concern)
+- Automatically applies `where(tenant_id: current_tenant)` on all queries
+- Validates associations don't cross tenant boundaries
+- Protects `update_all`, `delete_all`, `destroy_all` with tenant scope
+- Raises `Tenantify::TenantMismatchError` on silent override attempts
+
+### 5.2 `Tenantify::Controller` (Controller Concern)
+- `set_tenant_by :subdomain / :header / :jwt / :custom_domain`
+- Sets `current_tenant` for the duration of the request
+- Supports multiple resolvers with fallback chain
+- Raises `Tenantify::TenantNotFoundError` with configurable behavior (redirect / 404 / raise)
+
+### 5.3 `Tenantify::Job` (Job Concern)
+- Serializes tenant ID into job payload
+- Restores tenant context on retry — **fixes acts_as_tenant #356**
+- Unified support for:
+  - **Sidekiq** — middleware auto-registered
+  - **GoodJob** — execution hooks
+  - **Solid Queue** — dispatcher hooks
+  - **ActiveJob** — base adapter fallback
+
+### 5.4 Resolvers
+| Resolver | Use Case |
+|----------|----------|
+| `Subdomain` | `acme.yourapp.com` → `Organization.find_by(subdomain: "acme")` |
+| `Header` | `X-Tenant-ID: 42` header for API clients |
+| `JWT` | Decode `tenant_id` from JWT payload |
+| `CustomDomain` | `acme.com` → lookup custom domain mapping table |
+
+### 5.5 `Tenantify::Switcher` (Admin)
+```ruby
+Tenantify.switch_to(org) { User.all }    # block form
+Tenantify.switch_to!(org)                # persistent switch (console use)
+Tenantify.without_tenant { User.all }    # bypass tenant scope
+```
+
+### 5.6 `Tenantify::Auditor`
+- Logs every `current_tenant=` assignment with caller info
+- Raises `TenantOverrideError` when tenant is changed mid-request
+- Configurable: `:log`, `:raise`, or `:ignore`
+
+### 5.7 `Tenantify::Configuration` (Per-Tenant Config)
+```ruby
+Tenantify.configure do |config|
+  config.tenant_model = "Organization"
+  config.on_tenant_not_found = :raise   # :raise, :redirect, :null_tenant
+  config.audit_overrides = :log
+end
+
+# Per-tenant settings stored as JSONB
+organization.tenantify_config[:max_users] = 100
+organization.tenantify_config.save!
+```
+
+### 5.8 Test Helpers
+```ruby
+# RSpec
+include Tenantify::TestHelpers
+with_tenant(org) { ... }
+without_tenant { ... }
+
+# Minitest
+setup { Tenantify::TestHelpers.set_tenant(org) }
+teardown { Tenantify::TestHelpers.clear_tenant }
+```
+
+---
+
+## 6. Release Roadmap
+
+| Version | Features | Target |
+|---------|---------|--------|
+| **0.1.0** | Core scoping, subdomain resolver, model concern, basic controller concern | Week 1–2 |
+| **0.2.0** | Job support — Sidekiq, GoodJob, Solid Queue, ActiveJob | Week 3–4 |
+| **0.3.0** | API mode — header + JWT resolvers, `without_tenant` | Week 5 |
+| **0.4.0** | Custom domain routing, ActiveStorage support | Week 6 |
+| **0.5.0** | Per-tenant config, admin switcher, auditor | Week 7 |
+| **0.6.0** | Hotwire/Turbo Streams, GraphQL context support | Week 8 |
+| **0.7.0** | RSpec + Minitest helpers, console helpers, rake tasks | Week 9 |
+| **1.0.0** | Full test coverage, documentation, stable API | Week 10 |
+
+---
+
+## 7. Competitive Advantage
+
+| Feature | acts_as_tenant | apartment | Tenantify |
+|---------|---------------|-----------|-----------|
+| Rails 7+ / 8 support | Partial | No | ✅ Full |
+| Sidekiq retry-safe | ❌ | ❌ | ✅ |
+| GoodJob support | ❌ | ❌ | ✅ |
+| Solid Queue support | ❌ | ❌ | ✅ |
+| JWT resolver | ❌ | ❌ | ✅ |
+| Custom domain routing | ❌ | Partial | ✅ |
+| Hotwire/Turbo support | ❌ | ❌ | ✅ |
+| GraphQL support | ❌ | ❌ | ✅ |
+| Per-tenant config | ❌ | ❌ | ✅ |
+| Admin tenant switcher | Partial | ❌ | ✅ |
+| RSpec helpers | Partial | Partial | ✅ |
+| Tenant override protection | ❌ | ❌ | ✅ |
+| ActiveStorage scoping | ❌ | ❌ | ✅ |
+
+---
+
+## 8. Tech Stack & Dependencies
+
+- **Ruby** >= 3.1
+- **Rails** >= 7.0
+- **Optional integrations:** `sidekiq`, `good_job`, `solid_queue`, `graphql`, `turbo-rails`
+- **Testing:** RSpec, SimpleCov, FactoryBot
+- **CI:** GitHub Actions (Ruby 3.1, 3.2, 3.3 × Rails 7.0, 7.1, 7.2, 8.0)
+
+---
+
+## 9. First Milestone — v0.1.0 Checklist
+
+- [ ] `bundle gem tenantify` scaffold
+- [ ] `Tenantify::Scoped` model concern with default scope
+- [ ] `belongs_to_tenant` macro
+- [ ] `Tenantify::Controller` with subdomain resolver
+- [ ] `current_tenant` thread-local store
+- [ ] `Tenantify.switch_to` block form
+- [ ] `Tenantify.without_tenant` block form
+- [ ] Protection on `update_all` / `delete_all`
+- [ ] Cross-tenant association validation
+- [ ] Basic RSpec helper (`with_tenant`)
+- [ ] 90%+ test coverage
+- [ ] README with usage examples
+- [ ] Publish to RubyGems as `0.1.0`
+
+---
+
+*Built to replace acts_as_tenant for the modern Rails world.*
