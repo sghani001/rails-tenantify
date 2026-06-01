@@ -33,6 +33,17 @@ RSpec.describe Tenantify do
         Tenantify.current_tenant = org_a
       }.not_to raise_error
     end
+
+    it "allows override when audit_overrides is :ignore" do
+      Tenantify.current_tenant = org_a
+      allow(Tenantify.configuration).to receive(:audit_overrides).and_return(:ignore)
+
+      expect {
+        Tenantify.current_tenant = org_b
+      }.not_to raise_error
+
+      expect(Tenantify.current_tenant).to eq(org_b)
+    end
   end
 
   describe ".switch_to" do
