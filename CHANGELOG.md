@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.2] - 2026-06-01
+
+### Fixed
+
+- Pin `connection_pool` `< 3`, `minitest` `< 6`, and `sqlite3` `< 2` in the Gemfile so Ruby 3.1 CI can run (latest majors require Ruby >= 3.2)
+
+## [0.1.1] - 2026-06-01
+
+### Fixed
+
+- Add `lib/rails-tenantify.rb` so Bundler/Rails load the full gem API ([#1](https://github.com/sghani001/rails-tenantify/issues/1))
+- Guard `Tenantify::Railtie` so it always requires `tenantify` first — fixes `undefined method 'configure' for Tenantify:Module` in Rails initializers
+
 ## [0.1.0] - 2026-06-01
 
 Published as **`rails-tenantify`** on RubyGems (`gem "rails-tenantify"`). The name `tenantify` is already used by an unrelated gem from 2016.
