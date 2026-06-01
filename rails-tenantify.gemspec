@@ -39,5 +39,5 @@ Gem::Specification.new do |spec|
 
   spec.add_development_dependency "activejob", ">= 7.0", "< 9"
   spec.add_development_dependency "rspec", "~> 3.12"
-  spec.add_development_dependency "sqlite3", ">= 1.4", "< 3"
+  spec.add_development_dependency "sqlite3", ">= 1.4", "< 2"
 end

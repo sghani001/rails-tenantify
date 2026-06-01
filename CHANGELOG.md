@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
-- Pin `connection_pool` to `< 3` and `minitest` to `< 6` in the Gemfile so Ruby 3.1 CI can run (both require Ruby >= 3.2 at latest major versions)
+- Pin `connection_pool` `< 3`, `minitest` `< 6`, and `sqlite3` `< 2` in the Gemfile so Ruby 3.1 CI can run (latest majors require Ruby >= 3.2)
 
 ## [0.1.1] - 2026-06-01
 
