@@ -10,7 +10,7 @@
 ![Ruby](https://img.shields.io/badge/Ruby-3.1%2B-cc342d)
 ![SQLite](https://img.shields.io/badge/SQLite-compatible-blue)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-compatible-blue)
-![Stable](https://img.shields.io/badge/stable-0.1.1-brightgreen)
+![Stable](https://img.shields.io/badge/stable-0.1.2-brightgreen)
 
 **rails-tenantify** is a lightweight Rails gem for **row-level multi-tenancy**. Unlike [apartment](https://github.com/influitive/apartment), which switches entire databases or schemas per tenant, rails-tenantify keeps a single database and scopes records with a foreign key — the same model as [acts_as_tenant](https://github.com/ErwinM/acts_as_tenant), but maintained for **Rails 7+**, with **retry-safe jobs**, **bulk-write guards**, and **first-class test helpers**.
 
@@ -47,14 +47,14 @@ The RubyGems package is [`rails-tenantify`](https://rubygems.org/gems/rails-tena
 ## Installation
 
 ```ruby
-gem "rails-tenantify", "~> 0.1.1", require: "rails-tenantify"
+gem "rails-tenantify", "~> 0.1.2", require: "rails-tenantify"
 ```
 
 ```bash
 bundle install
 ```
 
-> **Requires v0.1.1+** — fixes `undefined method 'configure' for Tenantify:Module` when the gem name is `rails-tenantify`.
+> **Requires v0.1.1+** — fixes `undefined method 'configure' for Tenantify:Module`. Use **v0.1.2+** on Ruby 3.1.
 
 Create `config/initializers/tenantify.rb`:
 
@@ -320,7 +320,8 @@ end
 
 | Version | Focus |
 |---------|--------|
-| **0.1.1** (current) | Fix Rails boot / `Tenantify.configure` entrypoint |
+| **0.1.2** (current) | Ruby 3.1 CI — pin `connection_pool` < 3 |
+| **0.1.1** | Fix Rails boot / `Tenantify.configure` entrypoint |
 | **0.1.0** | Core scoping, subdomain/header resolvers, ActiveJob, Sidekiq, test helpers |
 | **0.2.0** | GoodJob, Solid Queue |
 | **0.3.0** | JWT resolver, API improvements |

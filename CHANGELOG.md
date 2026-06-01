@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.2] - 2026-06-01
+
+### Fixed
+
+- Pin `connection_pool` to `< 3` in the Gemfile so Ruby 3.1 CI can run (`connection_pool` 3.x requires Ruby >= 3.2)
+
 ## [0.1.1] - 2026-06-01
 
 ### Fixed
