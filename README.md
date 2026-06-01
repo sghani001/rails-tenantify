@@ -47,12 +47,14 @@ The RubyGems package is [`rails-tenantify`](https://rubygems.org/gems/rails-tena
 ## Installation
 
 ```ruby
-gem "rails-tenantify", "~> 0.1.1"
+gem "rails-tenantify", "~> 0.1.1", require: "rails-tenantify"
 ```
 
 ```bash
 bundle install
 ```
+
+> **Requires v0.1.1+** — fixes `undefined method 'configure' for Tenantify:Module` when the gem name is `rails-tenantify`.
 
 Create `config/initializers/tenantify.rb`:
 
@@ -318,6 +320,7 @@ end
 
 | Version | Focus |
 |---------|--------|
+| **0.1.1** (current) | Fix Rails boot / `Tenantify.configure` entrypoint |
 | **0.1.0** | Core scoping, subdomain/header resolvers, ActiveJob, Sidekiq, test helpers |
 | **0.2.0** | GoodJob, Solid Queue |
 | **0.3.0** | JWT resolver, API improvements |
