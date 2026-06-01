@@ -4,5 +4,6 @@ source "https://rubygems.org"
 
 gemspec
 
-# connection_pool 3.x requires Ruby >= 3.2; keep 3.1 CI green
+# Ruby 3.1 CI: these transitive deps require Ruby >= 3.2 when resolved on 3.2+
 gem "connection_pool", ">= 2.4", "< 3"
+gem "minitest", ">= 5.1", "< 6"
