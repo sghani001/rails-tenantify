@@ -133,5 +133,19 @@ RSpec.describe Tenantify::Scoped do
         }.not_to raise_error
       end
     end
+
+    it "raises TenantMismatchError when destroy_all is called without a tenant context" do
+      expect {
+        Project.destroy_all
+      }.to raise_error(Tenantify::TenantMismatchError)
+    end
+
+    it "allows destroy_all when tenant context is active" do
+      Tenantify.current_tenant = org_a
+      expect {
+        Project.destroy_all
+      }.not_to raise_error
+      expect(Project.count).to eq(0)
+    end
   end
 end

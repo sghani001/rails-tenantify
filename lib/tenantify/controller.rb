@@ -4,9 +4,14 @@ module Tenantify
   module Controller
     extend ActiveSupport::Concern
 
+    RESOLVERS = {
+      subdomain: Resolvers::Subdomain,
+      header: Resolvers::Header
+    }.freeze
+
     class_methods do
-      def set_tenant_by(resolver_type, options = {})
-        before_action(options.except(:exclude, :fallback)) do
+      def set_tenant_by(resolver_type, **options)
+        before_action(**options.slice(:only, :except, :if, :unless)) do
           resolve_and_set_tenant(resolver_type, options)
         end
       end
@@ -15,23 +20,11 @@ module Tenantify
     private
 
     def resolve_and_set_tenant(resolver_type, options)
-      tenant = nil
+      resolver_class = Tenantify::Controller::RESOLVERS[resolver_type]
+      raise ArgumentError, "Unknown Tenantify resolver type: #{resolver_type}" unless resolver_class
 
-      case resolver_type
-      when :subdomain
-        subdomain = request.subdomain
-        exclude_subdomains = Array(options[:exclude] || ["www"])
-        
-        if subdomain.present? && !exclude_subdomains.include?(subdomain)
-          tenant = Tenantify.tenant_class.find_by(subdomain: subdomain)
-        end
-      when :header
-        header_name = options[:header] || "X-Tenant-ID"
-        tenant_id = request.headers[header_name]
-        tenant = Tenantify.tenant_class.find_by(id: tenant_id) if tenant_id.present?
-      else
-        raise ArgumentError, "Unknown Tenantify resolver type: #{resolver_type}"
-      end
+      resolver = build_resolver(resolver_class, resolver_type, options)
+      tenant = resolver.call(request)
 
       if tenant
         Tenantify.current_tenant = tenant
@@ -40,9 +33,23 @@ module Tenantify
       end
     end
 
+    def build_resolver(resolver_class, resolver_type, options)
+      case resolver_type
+      when :subdomain
+        resolver_class.new(
+          exclude: options[:exclude] || %w[www],
+          attribute: options[:attribute] || :subdomain
+        )
+      when :header
+        resolver_class.new(header: options[:header] || "X-Tenant-ID")
+      else
+        resolver_class.new
+      end
+    end
+
     def handle_tenant_not_found(options)
       behavior = Tenantify.configuration.on_tenant_not_found
-      
+
       case behavior
       when :raise
         raise TenantNotFoundError, "Tenant could not be resolved for request to #{request.url}"
