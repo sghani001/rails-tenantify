@@ -14,7 +14,6 @@ require_relative "tenantify/controller"
 require_relative "tenantify/job"
 require_relative "tenantify/switcher"
 require_relative "tenantify/test_helpers"
-require_relative "tenantify/railtie" if defined?(Rails)
 
 module Tenantify
   class << self

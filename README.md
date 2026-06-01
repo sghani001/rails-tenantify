@@ -10,7 +10,7 @@
 ![Ruby](https://img.shields.io/badge/Ruby-3.1%2B-cc342d)
 ![SQLite](https://img.shields.io/badge/SQLite-compatible-blue)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-compatible-blue)
-![Stable](https://img.shields.io/badge/stable-0.1.0-brightgreen)
+![Stable](https://img.shields.io/badge/stable-0.1.1-brightgreen)
 
 **rails-tenantify** is a lightweight Rails gem for **row-level multi-tenancy**. Unlike [apartment](https://github.com/influitive/apartment), which switches entire databases or schemas per tenant, rails-tenantify keeps a single database and scopes records with a foreign key — the same model as [acts_as_tenant](https://github.com/ErwinM/acts_as_tenant), but maintained for **Rails 7+**, with **retry-safe jobs**, **bulk-write guards**, and **first-class test helpers**.
 
@@ -47,7 +47,7 @@ The RubyGems package is [`rails-tenantify`](https://rubygems.org/gems/rails-tena
 ## Installation
 
 ```ruby
-gem "rails-tenantify", "~> 0.1.0"
+gem "rails-tenantify", "~> 0.1.1"
 ```
 
 ```bash

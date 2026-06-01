@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+# Rails may load this file before lib/tenantify.rb; ensure the full API is defined.
+require "tenantify" unless Tenantify.respond_to?(:configure)
+
 require "rails/railtie"
 
 module Tenantify
